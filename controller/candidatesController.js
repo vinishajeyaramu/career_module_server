@@ -14,39 +14,17 @@ const storage = multer.diskStorage({
     },
   });
   
-  const upload = multer({ storage });
+const upload = multer({ storage });
 
-  app.post(
-    "/upload",
-    upload.fields([{ name: "resume" }, { name: "cover" }]),
-    (req, res) => {
-      // Handle the uploaded files
-      res.send("Files uploaded successfully");
-    }
-  );
-  
-  // GET: Fetch a single candidate
-//   app.get("/candidates/:id", async (req, res) => {
-//     try {
-//       const { id } = req.params;
-//       const result = await client.query(
-//         "SELECT * FROM candidates WHERE id = $1",
-//         [id]
-//       );
-  
-//       if (result.rows.length === 0) {
-//         return res.status(404).send("Candidate not found");
-//       }
-  
-//       res.json(result.rows[0]);
-//     } catch (error) {
-//       console.error(error);
-//       res.status(500).send("Server Error");
-//     }
-//   });
+app.post(
+  "/upload",
+  upload.single("resume"),  // Changed to single file upload
+  (req, res) => {
+    res.send("File uploaded successfully");
+  }
+);
 
-//GET Single Data
-
+// GET: Fetch a single candidate
 export const getSingleCandidates = async (req, res) => {
     try {
       const { id } = req.params;
@@ -66,7 +44,7 @@ export const getSingleCandidates = async (req, res) => {
 
 // POST: Add a candidate
 export const addCandidates = [
-    upload.fields([{ name: "resume" }, { name: "cover" }]),
+    upload.single("resume"),  // Changed to single file upload
     async (req, res) => {
       try {
         const {
@@ -79,12 +57,11 @@ export const addCandidates = [
           job_id,
           job_title,
         } = req.body;
-  
-        const resume = req.files["resume"][0].filename;
-        const cover = req.files["cover"][0].filename;
-  
+
+        const resume = req.file.filename;  // Changed to single file
+
         const result = await client.query(
-          "INSERT INTO candidates (first_name, last_name, email, phone, linkedin, website, resume, cover,job_id,job_title) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9,$10) RETURNING *",
+          "INSERT INTO candidates (first_name, last_name, email, phone, linkedin, website, resume, job_id, job_title) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *",
           [
             first_name,
             last_name,
@@ -93,12 +70,11 @@ export const addCandidates = [
             linkedin,
             website,
             resume,
-            cover,
             job_id,
             job_title,
           ]
         );
-  
+
         res.json(result.rows[0]);
       } catch (error) {
         console.error(error);
@@ -106,7 +82,6 @@ export const addCandidates = [
       }
     }
 ];
-
 
 // GET: Fetch all candidates
 export const getAllCandidates = async (req, res) => {
@@ -141,7 +116,7 @@ export const deleteCandidates = async (req, res) => {
 
 // UPDATE: Update candidate information
 export const updateCandidates = [
-    upload.fields([{ name: "resume" }, { name: "cover" }]),
+    upload.single("resume"),  // Changed to single file upload
     async (req, res) => {
       try {
         const { id } = req.params;
@@ -155,25 +130,22 @@ export const updateCandidates = [
           job_id,
           job_title,
         } = req.body;
-  
+
         const existingCandidate = await client.query(
           "SELECT * FROM candidates WHERE id = $1",
           [id]
         );
-  
+
         if (existingCandidate.rows.length === 0) {
           return res.status(404).send("Candidate not found");
         }
-  
-        const resume = req.files["resume"]
-          ? req.files["resume"][0].filename
+
+        const resume = req.file
+          ? req.file.filename
           : existingCandidate.rows[0].resume;
-        const cover = req.files["cover"]
-          ? req.files["cover"][0].filename
-          : existingCandidate.rows[0].cover;
-  
+
         const result = await client.query(
-          "UPDATE candidates SET first_name=$1, last_name=$2, email=$3, phone=$4, linkedin=$5, website=$6, resume=$7, cover=$8, job_id=$9 job_title=$10 WHERE id=$11  RETURNING *",
+          "UPDATE candidates SET first_name=$1, last_name=$2, email=$3, phone=$4, linkedin=$5, website=$6, resume=$7, job_id=$8, job_title=$9 WHERE id=$10 RETURNING *",
           [
             first_name,
             last_name,
@@ -182,13 +154,12 @@ export const updateCandidates = [
             linkedin,
             website,
             resume,
-            cover,
             job_id,
             job_title,
             id,
           ]
         );
-  
+
         res.json(result.rows[0]);
       } catch (error) {
         console.error(error);
