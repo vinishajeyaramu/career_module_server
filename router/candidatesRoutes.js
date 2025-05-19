@@ -15,11 +15,31 @@ const storage = multer.diskStorage({
     cb(null, uploadPath);
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(
+      null,
+      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname)
+    );
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage: storage,
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === "application/pdf") {
+      cb(null, true);
+    } else {
+      cb(null, false);
+      return cb(new Error("Only PDF files are allowed"));
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+}).fields([
+  { name: "resume", maxCount: 1 },
+  { name: "cover_letter", maxCount: 1 },
+]);
 
 // GET Single Data
 router.get("/:id", async (req, res) => {
@@ -49,7 +69,7 @@ router.get("/check-email/:email", async (req, res) => {
     );
     res.json({ exists: result.rows.length > 0 });
   } catch (error) {
-    console.error('Email check error:', error);
+    console.error("Email check error:", error);
     res.status(500).json({ error: "Server error checking email" });
   }
 });
@@ -57,7 +77,7 @@ router.get("/check-email/:email", async (req, res) => {
 // POST: Add a candidate
 router.post(
   "/",
-  upload.single("resume"),
+  upload,
   async (req, res) => {
     try {
       const {
@@ -70,10 +90,18 @@ router.post(
         job_id,
         job_title,
       } = req.body;
-      const resume = req.file.filename;
+
+      // Handle both resume and cover letter
+      const resume = req.files["resume"] ? req.files["resume"][0].filename : null;
+      const cover_letter = req.files["cover_letter"] ? req.files["cover_letter"][0].filename : null;
+
+      // Check if resume exists as it's required
+      if (!resume) {
+        return res.status(400).json({ error: "Resume is required" });
+      }
 
       const result = await client.query(
-        "INSERT INTO candidates (first_name, last_name, email, phone, linkedin, website, resume, job_id, job_title) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *",
+        "INSERT INTO candidates (first_name, last_name, email, phone, linkedin, website, resume, cover_letter, job_id, job_title) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *",
         [
           first_name,
           last_name,
@@ -82,6 +110,7 @@ router.post(
           linkedin,
           website,
           resume,
+          cover_letter,
           job_id,
           job_title,
         ]
@@ -90,7 +119,10 @@ router.post(
       res.json(result.rows[0]);
     } catch (error) {
       console.error(error);
-      res.status(500).send(error.message);
+      res.status(500).json({ 
+        error: error.message,
+        details: "Error uploading files or saving to database" 
+      });
     }
   }
 );
@@ -129,7 +161,7 @@ router.delete("/:id", async (req, res) => {
 // UPDATE: Update candidate information
 router.put(
   "/:id",
-  upload.single("resume"),
+  upload,
   async (req, res) => {
     try {
       const { id } = req.params;
@@ -153,8 +185,8 @@ router.put(
         return res.status(404).send("Candidate not found");
       }
 
-      const resume = req.file
-        ? req.file.filename
+      const resume = req.files["resume"]
+        ? req.files["resume"][0].filename
         : existingCandidate.rows[0].resume;
 
       const result = await client.query(
