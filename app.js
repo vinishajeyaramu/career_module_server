@@ -34,7 +34,18 @@ app.use("/auth", authRouter);
 app.use("/candidates", candidatesRouter);
 app.use("/api/v1", router);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+app.get('/test-db', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT NOW()');
+    res.json({ dbTime: result.rows[0].now });
+  } catch (err) {
+    console.error('Database error:', err);
+    res.status(500).json({ error: 'Database connection failed' });
+  }
+});
+
