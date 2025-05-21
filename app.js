@@ -24,7 +24,7 @@ app.get("/", async (req, res) => {
 });
 
 app.use(express.json());
-app.use(cors());
+// app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
@@ -50,8 +50,11 @@ app.get('/test-db', async (req, res) => {
 
 const cors = require('cors');
 
+// Replace this with your actual frontend Vercel domain
+const allowedOrigins = ['https://your-frontend.vercel.app'];
+
 app.use(cors({
-  origin: ['https://career-admin-gray.vercel.app/','https://career-client-pvsk.vercel.app/'], // Replace with your actual frontend domain
+  origin: allowedOrigins,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true,
 }));
