@@ -18,7 +18,6 @@ const pool = new Pool({
     rejectUnauthorized: false,
   },
 });
-module.exports = pool;
 app.get("/", async (req, res) => {
   const result = await pool.query("SELECT NOW()");
   res.send(result.rows[0]);
