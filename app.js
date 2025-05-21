@@ -48,3 +48,10 @@ app.get('/test-db', async (req, res) => {
   }
 });
 
+const cors = require('cors');
+
+app.use(cors({
+  origin: ['https://career-admin-gray.vercel.app/','https://career-client-pvsk.vercel.app/'], // Replace with your actual frontend domain
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true,
+}));
